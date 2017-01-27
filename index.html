@@ -1,0 +1,440 @@
+
+<!doctype html>
+<html>
+  <head>
+    <title>Diseases</title>
+    <style type="text/css">
+      html, body, #map-div {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      }
+      #color-bkg-div {
+        position: absolute;
+        top: 50px;
+        left: 5px;
+        color: #fff;
+      }
+      div.control {
+        position: absolute;
+        top: 30px;
+        right: 20px;
+        background-color: white;
+        padding: 7px;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 15px;
+      }
+    </style>
+    <link href="css/defaultUI.css" media="screen" rel="stylesheet" type="text/css"></link>
+    <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>    
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
+    <script src="http://maps.googleapis.com/maps/api/js"></script>
+    <script type="text/javascript" src="js/CanvasLayer.js"></script>
+    <script type="text/javascript" src="js/Glb.js"></script>
+    <script type="text/javascript" src="js/TimeSlider.js"></script>
+
+    <script id="point-vertex-shader" type="x-shader/x-vertex">
+      attribute vec4 a_Centroid; 
+
+      uniform mat4 u_MapMatrix;
+
+      void main() {
+        vec4 position;
+        position = u_MapMatrix * a_Centroid;
+        gl_Position = position;
+        gl_PointSize = 2.;
+      }
+    </script>
+    <script id="point-fragment-shader" type="x-shader/x-fragment">
+      precision mediump float;
+
+      uniform vec4 u_Color;
+
+      void main() {
+        float dist = length(gl_PointCoord.xy - vec2(.5, .5));
+        dist = 1. - (dist * 2.);
+        dist = max(0., dist);
+        gl_FragColor = u_Color * dist;
+      }
+
+    </script>
+    <script type="text/javascript">
+      var map;
+      var canvasLayer;
+      var gl;
+      var program;
+      var pixelsToWebGLMatrix = new Float32Array(16);
+      var mapMatrix = new Float32Array(16);
+      var countryPointSizePixels = 4;
+      var blockPointSizePixels = 20;
+
+      var parcels = {
+        url: "parcels.bin",
+        ready: false,
+        pointCount: 0,
+        data: null,
+        arrayBuffer: null
+      };
+
+      var timeSlider;
+
+      function load(url) {
+        //console.log("Loading...");
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', url);
+        xhr.responseType = 'arraybuffer';
+        xhr.onload = function() {
+          var float32Array = new Float32Array(this.response);
+          setData(float32Array);
+          var el = document.getElementById("loading");
+          if (el) {
+            el.style['display'] = 'none';
+          }
+        }
+        xhr.send();
+      }
+
+      function setData(buffer) {
+        parcels.pointCount = buffer.length / 2;
+        parcels.data = buffer;
+        parcels.arrayBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, parcels.arrayBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, parcels.data, gl.STATIC_DRAW);
+
+        var attributeLoc = gl.getAttribLocation(program, 'a_Centroid');
+        gl.enableVertexAttribArray(attributeLoc);
+        gl.vertexAttribPointer(attributeLoc, 2, gl.FLOAT, false, 8, 0);
+
+
+        parcels.ready = true;
+        timeSlider.play();
+
+      }
+
+      function draw(transform) {
+        if (parcels.ready) {
+
+          gl.useProgram(program);
+
+          var pointSize = Math.floor( ((15-1) * (map.zoom - 0) / (16 - 0)) + 1 );
+          var sizeLoc = gl.getUniformLocation(program, 'u_Size');
+          gl.uniform1f(sizeLoc, pointSize);
+          var matrixLoc = gl.getUniformLocation(program, 'u_MapMatrix');
+          gl.uniformMatrix4fv(matrixLoc, false, transform);
+
+          var currentTime = timeSlider.getCurrentTime();
+
+          var epochLoc = gl.getUniformLocation(program, 'u_Epoch');
+          gl.uniform1f(epochLoc, currentTime/1000.);
+
+
+          var uColor = [1.0,0.0,0.0,1.0];
+          var colorLoc = gl.getUniformLocation(program, 'u_Color');
+          gl.uniform4fv(colorLoc, uColor);
+
+          gl.bindBuffer(gl.ARRAY_BUFFER, parcels.arrayBuffer);
+
+          var attributeLoc = gl.getAttribLocation(program, 'a_Centroid');
+          gl.enableVertexAttribArray(attributeLoc);
+          gl.vertexAttribPointer(attributeLoc, 2, gl.FLOAT, false, 8, 0);
+
+          gl.drawArrays(gl.POINTS, 0, parcels.pointCount);
+        }
+      }
+
+      function scaleMatrix(matrix, scaleX, scaleY) {
+        matrix[0] *= scaleX;
+        matrix[1] *= scaleX;
+        matrix[2] *= scaleX;
+        matrix[3] *= scaleX;
+
+        matrix[4] *= scaleY;
+        matrix[5] *= scaleY;
+        matrix[6] *= scaleY;
+        matrix[7] *= scaleY;
+      }
+
+      function translateMatrix(matrix, tx, ty) {
+        matrix[12] += matrix[0]*tx + matrix[4]*ty;
+        matrix[13] += matrix[1]*tx + matrix[5]*ty;
+        matrix[14] += matrix[2]*tx + matrix[6]*ty;
+        matrix[15] += matrix[3]*tx + matrix[7]*ty;
+      }
+
+      function update() {
+        if (parcels.ready) {
+          gl.clear(gl.COLOR_BUFFER_BIT);
+          var mapProjection = map.getProjection();
+          mapMatrix.set(pixelsToWebGLMatrix);
+          var scale = canvasLayer.getMapScale();
+          scaleMatrix(mapMatrix, scale, scale);
+          var translation = canvasLayer.getMapTranslation();
+          translateMatrix(mapMatrix, translation.x, translation.y);
+          draw(mapMatrix);
+          timeSlider.animate();
+
+        }       
+      }
+
+      function resize() {
+        console.log('resizeHandler');
+        var w = gl.canvas.width;
+        var h = gl.canvas.height;
+        gl.viewport(0, 0, w, h);
+
+        // matrix which maps pixel coordinates to WebGL coordinates
+        pixelsToWebGLMatrix.set([2/w, 0,   0, 0,
+          0,  -2/h, 0, 0,
+          0,   0,   0, 0,
+         -1,   1,   0, 1]);
+      }
+
+      function initCanvasLayer(map, update, resize) {
+        var canvasLayerOptions = {
+          map: map,
+          resizeHandler: resize,
+          animate: true,
+          updateHandler: update
+        };
+        return new CanvasLayer(canvasLayerOptions);
+      }
+ 
+      function initMap() {
+        var mapOptions = {
+          zoom: 2,
+          center: new google.maps.LatLng(0.0, 0.0),
+          backgroundColor: "black",
+          styles:[
+            {
+              "elementType": "geometry",
+              "stylers": [
+                {
+                  "color": "#212121"
+                }
+              ]
+            },
+            {
+              "elementType": "labels.icon",
+              "stylers": [
+                {
+                  "visibility": "off"
+                }
+              ]
+            },
+            {
+              "elementType": "labels.text.fill",
+              "stylers": [
+                {
+                  "color": "#757575"
+                }
+              ]
+            },
+            {
+              "elementType": "labels.text.stroke",
+              "stylers": [
+                {
+                  "color": "#212121"
+                }
+              ]
+            },
+            {
+              "featureType": "administrative",
+              "elementType": "geometry",
+              "stylers": [
+                {
+                  "color": "#757575"
+                }
+              ]
+            },
+            {
+              "featureType": "administrative.country",
+              "elementType": "labels.text.fill",
+              "stylers": [
+                {
+                  "color": "#9e9e9e"
+                }
+              ]
+            },
+            {
+              "featureType": "administrative.land_parcel",
+              "stylers": [
+                {
+                  "visibility": "off"
+                }
+              ]
+            },
+            {
+              "featureType": "administrative.locality",
+              "elementType": "labels.text.fill",
+              "stylers": [
+                {
+                  "color": "#bdbdbd"
+                }
+              ]
+            },
+            {
+              "featureType": "poi",
+              "elementType": "labels.text.fill",
+              "stylers": [
+                {
+                  "color": "#757575"
+                }
+              ]
+            },
+            {
+              "featureType": "poi.park",
+              "elementType": "geometry",
+              "stylers": [
+                {
+                  "color": "#181818"
+                }
+              ]
+            },
+            {
+              "featureType": "poi.park",
+              "elementType": "labels.text.fill",
+              "stylers": [
+                {
+                  "color": "#616161"
+                }
+              ]
+            },
+            {
+              "featureType": "poi.park",
+              "elementType": "labels.text.stroke",
+              "stylers": [
+                {
+                  "color": "#1b1b1b"
+                }
+              ]
+            },
+            {
+              "featureType": "road",
+              "elementType": "geometry.fill",
+              "stylers": [
+                {
+                  "color": "#2c2c2c"
+                }
+              ]
+            },
+            {
+              "featureType": "road",
+              "elementType": "labels.text.fill",
+              "stylers": [
+                {
+                  "color": "#8a8a8a"
+                }
+              ]
+            },
+            {
+              "featureType": "road.arterial",
+              "elementType": "geometry",
+              "stylers": [
+                {
+                  "color": "#373737"
+                }
+              ]
+            },
+            {
+              "featureType": "road.highway",
+              "elementType": "geometry",
+              "stylers": [
+                {
+                  "color": "#3c3c3c"
+                }
+              ]
+            },
+            {
+              "featureType": "road.highway.controlled_access",
+              "elementType": "geometry",
+              "stylers": [
+                {
+                  "color": "#4e4e4e"
+                }
+              ]
+            },
+            {
+              "featureType": "road.local",
+              "elementType": "labels.text.fill",
+              "stylers": [
+                {
+                  "color": "#616161"
+                }
+              ]
+            },
+            {
+              "featureType": "transit",
+              "elementType": "labels.text.fill",
+              "stylers": [
+                {
+                  "color": "#757575"
+                }
+              ]
+            },
+            {
+              "featureType": "water",
+              "elementType": "geometry",
+              "stylers": [
+                {
+                  "color": "#000000"
+                }
+              ]
+            },
+            {
+              "featureType": "water",
+              "elementType": "labels.text.fill",
+              "stylers": [
+                {
+                  "color": "#3d3d3d"
+                }
+              ]
+            }
+          ]
+
+        };
+
+
+        var mapDiv = document.getElementById('map-div');
+        return new google.maps.Map(mapDiv, mapOptions);
+      }      
+
+      function init() {
+        map = initMap();
+        canvasLayer = initCanvasLayer(map, update, resize);
+        gl = canvasLayer.canvas.getContext('experimental-webgl');
+        gl.enable(gl.BLEND);
+        gl.blendFunc( gl.SRC_ALPHA, gl.ONE );
+        glb = new Glb(gl);
+        program = glb.programFromSources(document.getElementById('point-vertex-shader').text,
+                                         document.getElementById('point-fragment-shader').text);        
+        load(parcels.url);
+
+        timeSlider = new TimeSlider({
+          startTime: new Date('1984-01-01').getTime(),
+          endTime: new Date('2016-12-31').getTime(),
+          increment: 5*60*60*24*1000, // One day
+          span: 120*24*60*60*1000, // Two month
+          formatCurrentTime: function(date) {
+            return date.getFullYear();
+          },
+          animationRate: {
+            fast: 5,
+            medium: 10,
+            slow: 20
+          }
+        });
+
+      }
+
+      document.addEventListener('DOMContentLoaded', init, false);
+      window.addEventListener('resize', function () {  google.maps.event.trigger(map, 'resize') }, false);
+
+    </script>
+  </head>
+  <body>
+    <div id="map-div"></div>
+    <div id="time-slider-controls"></div>
+    <div id="timeMachine" style="display:none"></div>
+  </body>
+</html>
