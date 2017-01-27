@@ -2,7 +2,7 @@
 <!doctype html>
 <html>
   <head>
-    <title>Diseases</title>
+    <title>Allegheny County</title>
     <style type="text/css">
       html, body, #map-div {
       margin: 0;
@@ -37,13 +37,14 @@
     <script id="point-vertex-shader" type="x-shader/x-vertex">
       attribute vec4 a_Centroid; 
 
+      uniform float u_Size;
       uniform mat4 u_MapMatrix;
 
       void main() {
         vec4 position;
         position = u_MapMatrix * a_Centroid;
         gl_Position = position;
-        gl_PointSize = 2.;
+        gl_PointSize = u_Size;
       }
     </script>
     <script id="point-fragment-shader" type="x-shader/x-fragment">
@@ -117,7 +118,19 @@
 
           gl.useProgram(program);
 
-          var pointSize = Math.floor( ((15-1) * (map.zoom - 0) / (16 - 0)) + 1 );
+
+         // map.zoom is approx 4 at country level
+        // How many pixels in diameter should marker be when map zoomed to country level?
+        var countryLevelZoom = 10;
+        var countryPointSizePixels = 1;
+
+        // map.zoom is approx 18 at block level
+        // How many pixels in diameter should marker be when map zoomed to block level?
+        var blockLevelZoom = 18;
+        var blockPointSizePixels = 10;
+
+        var pointSize = countryPointSizePixels * Math.pow(blockPointSizePixels / countryPointSizePixels, (map.zoom - countryLevelZoom) / (blockLevelZoom - countryLevelZoom));
+
           var sizeLoc = gl.getUniformLocation(program, 'u_Size');
           gl.uniform1f(sizeLoc, pointSize);
           var matrixLoc = gl.getUniformLocation(program, 'u_MapMatrix');
@@ -202,8 +215,8 @@
  
       function initMap() {
         var mapOptions = {
-          zoom: 2,
-          center: new google.maps.LatLng(0.0, 0.0),
+          zoom: 10,
+          center: new google.maps.LatLng(40.43, -79.98),
           backgroundColor: "black",
           styles:[
             {
