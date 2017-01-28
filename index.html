@@ -36,13 +36,18 @@
 
     <script id="point-vertex-shader" type="x-shader/x-vertex">
       attribute vec4 a_Centroid; 
-
+      attribute float a_Epoch;
+      uniform float u_Epoch;
       uniform float u_Size;
       uniform mat4 u_MapMatrix;
 
       void main() {
         vec4 position;
-        position = u_MapMatrix * a_Centroid;
+        if (a_Epoch > u_Epoch) {
+          position = vec4(-1,-1,-1,-1);
+        } else {
+          position = u_MapMatrix * a_Centroid;
+        }
         gl_Position = position;
         gl_PointSize = u_Size;
       }
@@ -97,7 +102,7 @@
       }
 
       function setData(buffer) {
-        parcels.pointCount = buffer.length / 2;
+        parcels.pointCount = buffer.length / 3;
         parcels.data = buffer;
         parcels.arrayBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, parcels.arrayBuffer);
@@ -105,8 +110,11 @@
 
         var attributeLoc = gl.getAttribLocation(program, 'a_Centroid');
         gl.enableVertexAttribArray(attributeLoc);
-        gl.vertexAttribPointer(attributeLoc, 2, gl.FLOAT, false, 8, 0);
+        gl.vertexAttribPointer(attributeLoc, 2, gl.FLOAT, false, 12, 0);
 
+        var attributeLoc = gl.getAttribLocation(program, 'a_Epoch');
+        gl.enableVertexAttribArray(attributeLoc);
+        gl.vertexAttribPointer(attributeLoc, 1, gl.FLOAT, false, 12, 8);
 
         parcels.ready = true;
         timeSlider.play();
@@ -136,8 +144,7 @@
           var matrixLoc = gl.getUniformLocation(program, 'u_MapMatrix');
           gl.uniformMatrix4fv(matrixLoc, false, transform);
 
-          var currentTime = timeSlider.getCurrentTime();
-
+          var currentTime = timeSlider.getCurrentTime();          
           var epochLoc = gl.getUniformLocation(program, 'u_Epoch');
           gl.uniform1f(epochLoc, currentTime/1000.);
 
@@ -150,7 +157,11 @@
 
           var attributeLoc = gl.getAttribLocation(program, 'a_Centroid');
           gl.enableVertexAttribArray(attributeLoc);
-          gl.vertexAttribPointer(attributeLoc, 2, gl.FLOAT, false, 8, 0);
+          gl.vertexAttribPointer(attributeLoc, 2, gl.FLOAT, false, 12, 0);
+
+          var attributeLoc = gl.getAttribLocation(program, 'a_Epoch');
+          gl.enableVertexAttribArray(attributeLoc);
+          gl.vertexAttribPointer(attributeLoc, 1, gl.FLOAT, false, 12, 8);
 
           gl.drawArrays(gl.POINTS, 0, parcels.pointCount);
         }
@@ -424,9 +435,9 @@
         load(parcels.url);
 
         timeSlider = new TimeSlider({
-          startTime: new Date('1984-01-01').getTime(),
+          startTime: new Date('1755-01-01').getTime(),
           endTime: new Date('2016-12-31').getTime(),
-          increment: 5*60*60*24*1000, // One day
+          increment: 180*60*60*24*1000, // One day
           span: 120*24*60*60*1000, // Two month
           formatCurrentTime: function(date) {
             return date.getFullYear();
