@@ -168,8 +168,17 @@ var TimeSlider = function (config) {
    * @public
    */
   TimeSlider.prototype.play = function() {
-    this.animate_ = true;
-    $(".playbackButton").trigger("click");
+    if (!this.animate_) {
+      this.animate_ = true;
+      $(".playbackButton").trigger("click");      
+    }
+  }
+
+  TimeSlider.prototype.pause = function() {
+    if (this.animate_) {
+      this.animate_ = false;
+      $(".playbackButton").trigger("click");
+    }
   }
 
 
