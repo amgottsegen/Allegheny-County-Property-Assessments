@@ -24,6 +24,9 @@
         font-family: Arial, Helvetica, sans-serif;
         font-size: 15px;
       }
+      #time-slider-controls {
+        display: none;        
+      }
     </style>
     <link href="css/defaultUI.css" media="screen" rel="stylesheet" type="text/css"></link>
     <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
@@ -33,6 +36,7 @@
     <script type="text/javascript" src="js/CanvasLayer.js"></script>
     <script type="text/javascript" src="js/Glb.js"></script>
     <script type="text/javascript" src="js/TimeSlider.js"></script>
+    <script type="text/javascript" src="js/dat.gui.min.js"></script>
 
     <script id="point-vertex-shader" type="x-shader/x-vertex">
       attribute vec4 a_Centroid; 
@@ -84,6 +88,13 @@
       };
 
       var timeSlider;
+
+      var acpaText;
+      var gui;
+
+      var AcpaText = function() {
+        this.showYearBuilt = false;        
+      }
 
       function load(url) {
         //console.log("Loading...");
@@ -144,8 +155,11 @@
           var matrixLoc = gl.getUniformLocation(program, 'u_MapMatrix');
           gl.uniformMatrix4fv(matrixLoc, false, transform);
 
-          var currentTime = timeSlider.getCurrentTime();          
+          var currentTime = new Date();
           var epochLoc = gl.getUniformLocation(program, 'u_Epoch');
+          if (acpaText.showYearBuilt) {
+            currentTime = timeSlider.getCurrentTime();          
+          }
           gl.uniform1f(epochLoc, currentTime/1000.);
 
 
@@ -196,7 +210,9 @@
           var translation = canvasLayer.getMapTranslation();
           translateMatrix(mapMatrix, translation.x, translation.y);
           draw(mapMatrix);
-          timeSlider.animate();
+          if (acpaText.showYearBuilt) {
+            timeSlider.animate();
+          }
 
         }       
       }
@@ -449,6 +465,19 @@
           }
         });
 
+        acpaText = new AcpaText();
+        gui = new dat.GUI();
+        var controller = gui.add(acpaText, 'showYearBuilt');
+        controller.onChange(function(value) {
+          var el = document.getElementById("time-slider-controls");
+          if (value) {
+            el.style["display"] = "block";
+            timeSlider.play();
+          } else {
+            el.style["display"] = "none";
+            timeSlider.pause();
+          }
+        });
       }
 
       document.addEventListener('DOMContentLoaded', init, false);
