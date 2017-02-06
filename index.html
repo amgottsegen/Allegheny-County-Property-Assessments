@@ -27,6 +27,14 @@
       #time-slider-controls {
         display: none;        
       }
+      #legend-for-classes {
+        position: absolute;
+        top: 50px;
+        left: 10px;
+        background-color: white;
+        padding: 5px;
+        border-radius: 3px;
+      }
     </style>
     <link href="css/defaultUI.css" media="screen" rel="stylesheet" type="text/css"></link>
     <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
@@ -72,25 +80,25 @@
       vec3 getClassColor(float c) {
         vec3 color = vec3(1.0, 0.0, 0.0);
         if (c == 0.0) {
-          color = vec3(0.894117647059,0.101960784314,0.109803921569);
+          color = vec3(0.9843,0.1882,0.3490);
         }
         if (c == 1.0) {
-          color = vec3(0.21568627451,0.494117647059,0.721568627451);
+          color = vec3(0.9961,0.4196,0.1765);
         }
         if (c == 2.0) {
-          color = vec3(0.301960784314,0.686274509804,0.290196078431);
+          color = vec3(0.8196,0.5804,0.4784);
         }
         if (c == 3.0) {
-          color = vec3(0.596078431373,0.305882352941,0.639215686275);
+          color = vec3(0.7765,0.6627,0.0000);
         }
         if (c == 4.0) {
-          color = vec3(1.0,0.498039215686,0.0);
+          color = vec3(0.0078,0.7922,0.4588);
         }
         if (c == 5.0) {
-          color = vec3(1.0,1.0,0.2);
+          color = vec3(0.0000,0.6353,0.8706);
         }
         if (c == 6.0) {
-          color = vec3(0.650980392157,0.337254901961,0.156862745098);
+          color = vec3(0.5843,0.1608,0.6941);
         }
         return color;
       }      
@@ -541,5 +549,21 @@
     <div id="map-div"></div>
     <div id="time-slider-controls"></div>
     <div id="timeMachine" style="display:none"></div>
+    <div id="legend-for-classes">
+      <div style="background-color:#fb3059; border-radius: 50%; width:13px; height: 13px;"></div>
+      <div style="margin-left: 29px; margin-top: -16px; font-size: 17px">Agricultural</div>
+      <div style="background-color:#fe6b2d; border-radius: 50%; width:13px; height: 13px;"></div>
+      <div style="margin-left: 29px; margin-top: -16px; font-size: 17px">Commercial</div>
+      <div style="background-color:#d1947a; border-radius: 50%; width:13px; height: 13px;"></div>
+      <div style="margin-left: 29px; margin-top: -16px; font-size: 17px">Government</div>
+      <div style="background-color:#c6a900; border-radius: 50%; width:13px; height: 13px;"></div>
+      <div style="margin-left: 29px; margin-top: -16px; font-size: 17px">Industrial</div>
+      <div style="background-color:#02ca75; border-radius: 50%; width:13px; height: 13px;"></div>
+      <div style="margin-left: 29px; margin-top: -16px; font-size: 17px">Other</div>
+      <div style="background-color:#00a2de; border-radius: 50%; width:13px; height: 13px;"></div>
+      <div style="margin-left: 29px; margin-top: -16px; font-size: 17px">Residential</div>
+      <div style="background-color:#9529b1; border-radius: 50%; width:13px; height: 13px;"></div>
+      <div style="margin-left: 29px; margin-top: -16px; font-size: 17px">Utilities</div>
+    </div>
   </body>
 </html>
