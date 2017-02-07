@@ -28,6 +28,7 @@
         display: none;        
       }
       #legend-for-classes {
+        display: none;
         position: absolute;
         top: 50px;
         left: 10px;
@@ -74,6 +75,7 @@
       precision mediump float;
 
       uniform vec4 u_Color;
+      uniform float u_ColorCode;
 
       varying float v_Class;
 
@@ -108,7 +110,9 @@
         dist = 1. - (dist * 2.);
         dist = max(0., dist);
         vec3 color = u_Color.rgb;
-        color = getClassColor(v_Class);
+        if (u_ColorCode == 1.0) {
+          color = getClassColor(v_Class);
+        }
         gl_FragColor = vec4(color,1.0) * dist;
       }
 
@@ -138,6 +142,7 @@
 
       var AcpaText = function() {
         this.showYearBuilt = false;        
+        this.colorCode = '';
       }
 
       function load(url) {
@@ -222,6 +227,14 @@
           var uColor = [1.0,0.0,0.0,1.0];
           var colorLoc = gl.getUniformLocation(program, 'u_Color');
           gl.uniform4fv(colorLoc, uColor);
+
+
+          var colorCode = 0.;
+          if (acpaText.colorCode == "parcelClass") {
+            colorCode = 1.;
+          }
+          var colorCodeLoc = gl.getUniformLocation(program, 'u_ColorCode');
+          gl.uniform1f(colorCodeLoc, colorCode);
 
           gl.bindBuffer(gl.ARRAY_BUFFER, parcels.arrayBuffer);
 
@@ -538,6 +551,16 @@
             timeSlider.pause();
           }
         });
+        var controller = gui.add(acpaText, 'colorCode', { '': '', parcelClass: 'parcelClass' });
+        controller.onChange(function(value) {
+          var el = document.getElementById("legend-for-classes");
+          if (value == "") {
+            el.style["display"] = "none";
+          } else {
+            el.style["display"] = "block";
+          }
+        });
+
       }
 
       document.addEventListener('DOMContentLoaded', init, false);
@@ -550,6 +573,7 @@
     <div id="time-slider-controls"></div>
     <div id="timeMachine" style="display:none"></div>
     <div id="legend-for-classes">
+      <strong>Parcel Classes</strong>
       <div style="background-color:#fb3059; border-radius: 50%; width:13px; height: 13px;"></div>
       <div style="margin-left: 29px; margin-top: -16px; font-size: 17px">Agricultural</div>
       <div style="background-color:#fe6b2d; border-radius: 50%; width:13px; height: 13px;"></div>
