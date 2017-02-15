@@ -94,10 +94,25 @@
       varying float v_Year;
 
       float scale_year(float year) {
-        if (year < 1900.0) {
-          year = 1900.0;
+        if (year <= 1900.0) {
+          return 1.0;
+        } else if (year < 1916.0) {
+          return 2.0;          
+        } else if (year < 1932.0) {
+          return 3.0;
+        } else if (year < 1948.0) {
+          return 4.0;
+        } else if (year < 1964.0) {
+          return 5.0;
+        } else if (year < 1980.0) {
+          return 6.0;
+        } else if (year < 1996.0) {
+          return 7.0;
+        } else if (year < 2012.0) {
+          return 8.0;
+        } else {
+          return 9.;
         }
-        return 15. - floor(((year - 1900.) * 15.)/(2016.-1900.));
       }
 
       void main() {
@@ -632,7 +647,27 @@
       <div style="margin-left: 29px; margin-top: -16px; font-size: 17px">Utilities</div>
     </div>
     <div id="legend-for-year-built">
-      <strong>Year built</strong>
+      <strong>Year built</strong><br/>
+      <svg width="320" height="30">
+<rect fill="#8b0000" x="0" height="10" width="25" stroke-width="1px" stroke="#666"></rect>
+<rect fill="#b3152f" x="25" height="10" width="25" stroke-width="1px" stroke="#666"></rect>
+<rect fill="#d3394a" x="50" height="10" width="25" stroke-width="1px" stroke="#666"></rect>
+<rect fill="#eb5f5b" x="75" height="10" width="25" stroke-width="1px" stroke="#666"></rect>
+<rect fill="#fb8768" x="100" height="10" width="25" stroke-width="1px" stroke="#666"></rect>
+<rect fill="#ffb27c" x="125" height="10" width="25" stroke-width="1px" stroke="#666"></rect>
+<rect fill="#ffdaa3" x="150" height="10" width="25" stroke-width="1px" stroke="#666"></rect>
+<rect fill="#ffffe0" x="175" height="10" width="25" stroke-width="1px" stroke="#666"></rect>
+<rect fill="#ffffFF" x="200" height="10" width="25" stroke-width="1px" stroke="#666"></rect>
+<text font-size="10.5px" fill="#000000" y="29" x="0">1900</text>
+<text font-size="10.5px" y="29" x="25">1916</text>
+<text font-size="10.5px" y="29" x="50">1932</text>
+<text font-size="10.5px" y="29" x="75">1948</text>
+<text font-size="10.5px" y="29" x="100">1964</text>
+<text font-size="10.5px" y="29" x="125">1980</text>
+<text font-size="10.5px" y="29" x="150">1996</text>
+<text font-size="10.5px" y="29" x="175">2012</text>
+<text font-size="10.5px" y="29" x="200">2016</text>
+      </svg>      
     </div>
 
   </body>
