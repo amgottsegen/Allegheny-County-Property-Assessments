@@ -36,6 +36,15 @@
         padding: 5px;
         border-radius: 3px;
       }
+      #legend-for-year-built {
+        display: none;
+        position: absolute;
+        top: 50px;
+        left: 10px;
+        background-color: white;
+        padding: 5px;
+        border-radius: 3px;
+      }
     </style>
     <link href="css/defaultUI.css" media="screen" rel="stylesheet" type="text/css"></link>
     <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
@@ -49,26 +58,29 @@
 
     <script id="point-vertex-shader" type="x-shader/x-vertex">
       attribute vec4 a_Centroid; 
-      attribute float a_Epoch;
+      attribute float a_Year;
       attribute float a_Class;
 
+      uniform float u_CurrentEpoch;
       uniform float u_MaxEpoch;
       uniform float u_MinEpoch;
       uniform float u_Size;
       uniform mat4 u_MapMatrix;
 
       varying float v_Class;
+      varying float v_Year;
 
       void main() {
         vec4 position;
-        if (a_Epoch > u_MaxEpoch || a_Epoch < u_MinEpoch) {
-          position = vec4(-1,-1,-1,-1);
-        } else {
+//        if (a_Year > u_CurrentEpoch || a_Year < u_MinEpoch) {
+//          position = vec4(-1,-1,-1,-1);
+//        } else {
           position = u_MapMatrix * a_Centroid;
-        }
+//        }
         gl_Position = position;
         gl_PointSize = u_Size;
         v_Class = a_Class;
+        v_Year = a_Year;
       }
     </script>
     <script id="point-fragment-shader" type="x-shader/x-fragment">
@@ -76,44 +88,36 @@
 
       uniform vec4 u_Color;
       uniform float u_ColorCode;
+      uniform sampler2D u_Image;
 
       varying float v_Class;
+      varying float v_Year;
 
-      vec3 getClassColor(float c) {
-        vec3 color = vec3(1.0, 0.0, 0.0);
-        if (c == 0.0) {
-          color = vec3(0.9843,0.1882,0.3490);
+      float scale_year(float year) {
+        if (year < 1900.0) {
+          year = 1900.0;
         }
-        if (c == 1.0) {
-          color = vec3(0.9961,0.4196,0.1765);
-        }
-        if (c == 2.0) {
-          color = vec3(0.8196,0.5804,0.4784);
-        }
-        if (c == 3.0) {
-          color = vec3(0.7765,0.6627,0.0000);
-        }
-        if (c == 4.0) {
-          color = vec3(0.0078,0.7922,0.4588);
-        }
-        if (c == 5.0) {
-          color = vec3(0.0000,0.6353,0.8706);
-        }
-        if (c == 6.0) {
-          color = vec3(0.5843,0.1608,0.6941);
-        }
-        return color;
-      }      
+        return 15. - floor(((year - 1900.) * 15.)/(2016.-1900.));
+      }
 
       void main() {
-        float dist = length(gl_PointCoord.xy - vec2(.5, .5));
-        dist = 1. - (dist * 2.);
-        dist = max(0., dist);
-        vec3 color = u_Color.rgb;
-        if (u_ColorCode == 1.0) {
-          color = getClassColor(v_Class);
+        vec4 color = u_Color.rgba;
+        if (u_ColorCode == 1.0) { // ParcelClass
+          vec4 img_color = texture2D(u_Image, vec2(1.0/256.0,v_Class/256.0));
+          gl_FragColor = vec4(img_color.r, img_color.g, img_color.b, 1.);
+        } else if (u_ColorCode == 2.0) { //YearBuilt
+          vec4 img_color;
+          if (v_Year < 1755.0 ) {
+            img_color = vec4(0.25,0.25,0.25,1.0);
+          } else {
+           img_color = texture2D(u_Image, vec2(2.0/256.0,scale_year(v_Year)/256.0));
+          }
+
+          gl_FragColor = vec4(img_color.r, img_color.g, img_color.b, 1.);
+        } else {
+          gl_FragColor = color;          
         }
-        gl_FragColor = vec4(color,1.0) * dist;
+
       }
 
     </script>
@@ -132,8 +136,10 @@
         ready: false,
         pointCount: 0,
         data: null,
-        arrayBuffer: null
+        arrayBuffer: null,
+        texture: null
       };
+
 
       var timeSlider;
 
@@ -172,13 +178,25 @@
         gl.enableVertexAttribArray(attributeLoc);
         gl.vertexAttribPointer(attributeLoc, 2, gl.FLOAT, false, 16, 0);
 
-        var attributeLoc = gl.getAttribLocation(program, 'a_Epoch');
+        var attributeLoc = gl.getAttribLocation(program, 'a_Year');
         gl.enableVertexAttribArray(attributeLoc);
         gl.vertexAttribPointer(attributeLoc, 1, gl.FLOAT, false, 16, 8);
 
         var attributeLoc = gl.getAttribLocation(program, 'a_Class');
         gl.enableVertexAttribArray(attributeLoc);
         gl.vertexAttribPointer(attributeLoc, 1, gl.FLOAT, false, 16, 12);
+
+        parcels.texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, parcels.texture);
+
+        // Set the parameters so we can render any size image.
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+        // Upload the image into the texture.
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, parcels.image);
 
         parcels.ready = true;
         timeSlider.play();
@@ -191,17 +209,17 @@
           gl.useProgram(program);
 
 
-         // map.zoom is approx 4 at country level
-        // How many pixels in diameter should marker be when map zoomed to country level?
-        var countryLevelZoom = 10;
-        var countryPointSizePixels = 1;
+          // map.zoom is approx 4 at country level
+          // How many pixels in diameter should marker be when map zoomed to country level?
+          var countryLevelZoom = 10;
+          var countryPointSizePixels = 1;
 
-        // map.zoom is approx 18 at block level
-        // How many pixels in diameter should marker be when map zoomed to block level?
-        var blockLevelZoom = 18;
-        var blockPointSizePixels = 10;
+          // map.zoom is approx 18 at block level
+          // How many pixels in diameter should marker be when map zoomed to block level?
+          var blockLevelZoom = 18;
+          var blockPointSizePixels = 8;
 
-        var pointSize = countryPointSizePixels * Math.pow(blockPointSizePixels / countryPointSizePixels, (map.zoom - countryLevelZoom) / (blockLevelZoom - countryLevelZoom));
+          var pointSize = countryPointSizePixels * Math.pow(blockPointSizePixels / countryPointSizePixels, (map.zoom - countryLevelZoom) / (blockLevelZoom - countryLevelZoom));
 
           var sizeLoc = gl.getUniformLocation(program, 'u_Size');
           gl.uniform1f(sizeLoc, pointSize);
@@ -209,12 +227,16 @@
           gl.uniformMatrix4fv(matrixLoc, false, transform);
 
           var currentTime = new Date();
-          var epochLoc = gl.getUniformLocation(program, 'u_MaxEpoch');
+          var epochLoc = gl.getUniformLocation(program, 'u_CurrentEpoch');
           if (acpaText.showYearBuilt) {
             currentTime = timeSlider.getCurrentTime();          
           }
           gl.uniform1f(epochLoc, currentTime/1000.);
 
+          var maxTime = new Date();
+          var epochLoc = gl.getUniformLocation(program, 'u_MaxEpoch');
+          maxTime = timeSlider.getEndTime();          
+          gl.uniform1f(epochLoc, maxTime/1000.);
 
           var minTime = new Date("0001");
           var epochLoc = gl.getUniformLocation(program, 'u_MinEpoch');
@@ -233,6 +255,10 @@
           if (acpaText.colorCode == "parcelClass") {
             colorCode = 1.;
           }
+          if (acpaText.colorCode == "yearBuilt") {
+            colorCode = 2.;
+          }
+
           var colorCodeLoc = gl.getUniformLocation(program, 'u_ColorCode');
           gl.uniform1f(colorCodeLoc, colorCode);
 
@@ -242,13 +268,17 @@
           gl.enableVertexAttribArray(attributeLoc);
           gl.vertexAttribPointer(attributeLoc, 2, gl.FLOAT, false, 16, 0);
 
-          var attributeLoc = gl.getAttribLocation(program, 'a_Epoch');
+          var attributeLoc = gl.getAttribLocation(program, 'a_Year');
           gl.enableVertexAttribArray(attributeLoc);
           gl.vertexAttribPointer(attributeLoc, 1, gl.FLOAT, false, 16, 8);
 
           var attributeLoc = gl.getAttribLocation(program, 'a_Class');
           gl.enableVertexAttribArray(attributeLoc);
           gl.vertexAttribPointer(attributeLoc, 1, gl.FLOAT, false, 16, 12);
+
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, parcels.texture);
+          gl.uniform1i(gl.getUniformLocation(program, "u_Image"), 0);
 
           gl.drawArrays(gl.POINTS, 0, parcels.pointCount);
         }
@@ -517,14 +547,20 @@
         canvasLayer = initCanvasLayer(map, update, resize);
         gl = canvasLayer.canvas.getContext('experimental-webgl');
         gl.enable(gl.BLEND);
-        gl.blendFunc( gl.SRC_ALPHA, gl.ONE );
+        //gl.blendFunc( gl.SRC_ALPHA, gl.ONE );
         glb = new Glb(gl);
         program = glb.programFromSources(document.getElementById('point-vertex-shader').text,
+
                                          document.getElementById('point-fragment-shader').text);        
-        load(parcels.url);
+        parcels.image = new Image();
+        parcels.image.src = "color-map.png";
+        parcels.image.onload = function() {
+          load(parcels.url);
+        }
+
 
         timeSlider = new TimeSlider({
-          startTime: new Date('1855-01-01').getTime(),
+          startTime: new Date('1900-01-01').getTime(),
           endTime: new Date('2016-12-31').getTime(),
           increment: 180*60*60*24*1000, // One day
           span: 120*24*60*60*1000, // Two month
@@ -532,9 +568,9 @@
             return date.getFullYear();
           },
           animationRate: {
-            fast: 5,
-            medium: 10,
-            slow: 20
+            fast: 20,
+            medium: 30,
+            slow: 40
           }
         });
 
@@ -551,13 +587,19 @@
             timeSlider.pause();
           }
         });
-        var controller = gui.add(acpaText, 'colorCode', { '': '', parcelClass: 'parcelClass' });
+        var controller = gui.add(acpaText, 'colorCode', { '': '', parcelClass: 'parcelClass', yearBuilt: 'yearBuilt' });
         controller.onChange(function(value) {
-          var el = document.getElementById("legend-for-classes");
+          var el_classes = document.getElementById("legend-for-classes");
+          var el_year_built = document.getElementById("legend-for-year-built");
           if (value == "") {
-            el.style["display"] = "none";
-          } else {
-            el.style["display"] = "block";
+            el_classes.style["display"] = "none";
+            el_year_built.style["display"] = "none";
+          } else if (value == "parcelClass") {
+            el_classes.style["display"] = "block";
+            el_year_built.style["display"] = "none";
+          }  else if (value == "yearBuilt"){
+            el_classes.style["display"] = "none";
+            el_year_built.style["display"] = "block";
           }
         });
 
@@ -589,5 +631,9 @@
       <div style="background-color:#9529b1; border-radius: 50%; width:13px; height: 13px;"></div>
       <div style="margin-left: 29px; margin-top: -16px; font-size: 17px">Utilities</div>
     </div>
+    <div id="legend-for-year-built">
+      <strong>Year built</strong>
+    </div>
+
   </body>
 </html>
