@@ -441,3 +441,11 @@ var TimeSlider = function (config) {
   TimeSlider.prototype.getStartTime = function() {
     return this.startTime_ + this.span_;
   }
+
+    /**
+   * @return {integer} the current start time + the span
+   */
+  TimeSlider.prototype.getEndTime = function() {
+    return this.endTime_;
+  }
+
