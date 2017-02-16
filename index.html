@@ -61,9 +61,7 @@
       attribute float a_Year;
       attribute float a_Class;
 
-      uniform float u_CurrentEpoch;
-      uniform float u_MaxEpoch;
-      uniform float u_MinEpoch;
+      uniform float u_CurrentYear;
       uniform float u_Size;
       uniform mat4 u_MapMatrix;
 
@@ -72,11 +70,11 @@
 
       void main() {
         vec4 position;
-//        if (a_Year > u_CurrentEpoch || a_Year < u_MinEpoch) {
-//          position = vec4(-1,-1,-1,-1);
-//        } else {
+        if (a_Year > u_CurrentYear ) {
+          position = vec4(-1,-1,-1,-1);
+        } else {
           position = u_MapMatrix * a_Centroid;
-//        }
+        }
         gl_Position = position;
         gl_PointSize = u_Size;
         v_Class = a_Class;
@@ -242,11 +240,11 @@
           gl.uniformMatrix4fv(matrixLoc, false, transform);
 
           var currentTime = new Date();
-          var epochLoc = gl.getUniformLocation(program, 'u_CurrentEpoch');
+          var epochLoc = gl.getUniformLocation(program, 'u_CurrentYear');
           if (acpaText.showYearBuilt) {
-            currentTime = timeSlider.getCurrentTime();          
+            currentTime = new Date(timeSlider.getCurrentTime());          
           }
-          gl.uniform1f(epochLoc, currentTime/1000.);
+          gl.uniform1f(epochLoc, currentTime.getUTCFullYear());
 
           var maxTime = new Date();
           var epochLoc = gl.getUniformLocation(program, 'u_MaxEpoch');
@@ -575,12 +573,13 @@
 
 
         timeSlider = new TimeSlider({
-          startTime: new Date('1900-01-01').getTime(),
+          startTime: new Date('1850-01-01').getTime(),
           endTime: new Date('2016-12-31').getTime(),
           increment: 180*60*60*24*1000, // One day
-          span: 120*24*60*60*1000, // Two month
+          span: 60*24*60*60*1000, // Two month
+          dwellAnimationTime: 2000,
           formatCurrentTime: function(date) {
-            return date.getFullYear();
+            return date.getUTCFullYear();
           },
           animationRate: {
             fast: 20,
