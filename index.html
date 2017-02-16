@@ -45,6 +45,15 @@
         padding: 5px;
         border-radius: 3px;
       }
+      #legend-for-fair-market-total {
+        display: block;
+        position: absolute;
+        top: 50px;
+        left: 10px;
+        background-color: white;
+        padding: 5px;
+        border-radius: 3px;
+      }
     </style>
     <link href="css/defaultUI.css" media="screen" rel="stylesheet" type="text/css"></link>
     <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
@@ -141,8 +150,10 @@
           scaled_total = 10.0;
         } else if (fm_total < 500000.) {
           scaled_total = 11.0;
-        } else {
+        } else if (fm_total < 750000.) {
           scaled_total = 12.0;
+        } else {
+          scaled_total = 13.0;
         }
         return scaled_total;
       }
@@ -713,6 +724,39 @@
 <text font-size="10.5px" y="29" x="200">2016</text>
       </svg>      
     </div>
+    <div id="legend-for-fair-market-total">
+      <strong>Fair market total $</strong><br/>
+      <svg width="400" height="30">
+<rect fill="#a50026" x="0" height="10" width="30"></rect>
+<rect fill="#cd2827" x="30" height="10" width="30"></rect>
+<rect fill="#e75436" x="60" height="10" width="30"></rect>
+<rect fill="#f7804b" x="90" height="10" width="30"></rect>
+<rect fill="#fdad61" x="120" height="10" width="30"></rect>
+<rect fill="#fed788" x="150" height="10" width="30"></rect>
+<rect fill="#ffffbf" x="180" height="10" width="30"></rect>
+<rect fill="#b9e0ed" x="210" height="10" width="30"></rect>
+<rect fill="#8dc0db" x="240" height="10" width="30"></rect>
+<rect fill="#699fca" x="270" height="10" width="30"></rect>
+<rect fill="#4d7db9" x="300" height="10" width="30"></rect>
+<rect fill="#3e5aa7" x="330" height="10" width="30"></rect>
+<rect fill="#313695" x="360" height="10" width="30"></rect>
+<text font-size="10.5px" y="29" x="0">0</text>
+<text font-size="10.5px" y="29" x="20">25K</text>
+<text font-size="10.5px" y="29" x="50">50K</text>
+<text font-size="10.5px" y="29" x="80">75K</text>
+<text font-size="10.5px" y="29" x="110">100K</text>
+<text font-size="10.5px" y="29" x="140">125K</text>
+<text font-size="10.5px" y="29" x="170">150K</text>
+<text font-size="10.5px" y="29" x="200">200K</text>
+<text font-size="10.5px" y="29" x="230">250K</text>
+<text font-size="10.5px" y="29" x="260">300K</text>
+<text font-size="10.5px" y="29" x="290">400K</text>
+<text font-size="10.5px" y="29" x="320">500K</text>
+<text font-size="10.5px" y="29" x="350">750K</text>
+<text font-size="10.5px" y="29" x="380">1M+</text>
+      </svg>      
+    </div>
+
 
   </body>
 </html>
